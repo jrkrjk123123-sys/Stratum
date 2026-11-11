@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Stratum — Web Design Studio</title>
+  <!-- Load Fabric.js Canvas Engine -->
+  <script src="https://cloudflare.com"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      background-color: #18181b;
+      color: #f4f4f5;
+      overflow: hidden;
+    }
+
+    /* Top Navigation Bar */
+    header {
+      height: 56px;
+      background-color: #09090b;
+      border-bottom: 1px solid #27272a;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+    }
+
+    .brand {
+      font-size: 1.2rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #ffffff;
+    }
+
+    .brand span {
+      color: #6366f1;
+    }
+
+    .top-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    button {
+      background-color: #27272a;
+      color: #f4f4f5;
+      border: 1px solid #3f3f46;
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+
+    button:hover {
+      background-color: #3f3f46;
+    }
+
+    button.primary {
+      background-color: #6366f1;
+      border-color: #6366f1;
+      color: #ffffff;
+    }
+
+    button.primary:hover {
+      background-color: #4f46e5;
+    }
+
+    button.danger:hover {
+      background-color: #dc2626;
+      border-color: #dc2626;
+    }
+
+    /* Main Workspace Layout */
+    .workspace {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* Left Tool Sidebar */
+    aside {
+      width: 220px;
+      background-color: #121215;
+      border-right: 1px solid #27272a;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .section-title {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #a1a1aa;
+      margin-top: 8px;
+    }
+
+    aside button {
+      width: 100%;
+      text-align: left;
+    }
+
+    .color-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      color: #d4d4d8;
+    }
+
+    input[type="color"] {
+      width: 36px;
+      height: 28px;
+      border: none;
+      background: none;
+      cursor: pointer;
+    }
+
+    /* Center Canvas Area */
+    main {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: #1e1e22;
+      background-image: radial-gradient(#2e2e34 1px, transparent 1px);
+      background-size: 20px 20px;
+      padding: 24px;
+      overflow: auto;
+    }
+
+    .canvas-wrapper {
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+      background: #ffffff;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Bar -->
+  <header>
+    <div class="brand">STRATUM<span>.</span></div>
+    <div class="top-actions">
+      <button onclick="bringForward()">Layer Up</button>
+      <button onclick="sendBackward()">Layer Down</button>
+      <button class="danger" onclick="deleteSelected()">Delete</button>
+      <button class="primary" onclick="exportImage()">Export PNG</button>
+    </div>
+  </header>
+
+  <!-- Workspace -->
+  <div class="workspace">
+    <!-- Left Sidebar -->
+    <aside>
+      <div class="section-title">Create</div>
+      <button onclick="addText()">+ Add Text</button>
+      <button onclick="addRect()">+ Add Rectangle</button>
+      <button onclick="addCircle()">+ Add Circle</button>
+      <button onclick="triggerUpload()">+ Upload Image</button>
+      <input type="file" id="img-upload" accept="image/*" style="display: none;" />
+
+      <div class="section-title">Properties</div>
+      <div class="color-row">
+        <label for="fill-color">Object Color</label>
+        <input type="color" id="fill-color" value="#6366f1" onchange="changeColor(this.value)" />
+      </div>
+      <div class="color-row">
+        <label for="bg-color">Canvas Color</label>
+        <input type="color" id="bg-color" value="#ffffff" onchange="changeCanvasBg(this.value)" />
+      </div>
+    </aside>
+
+    <!-- Canvas Center -->
+    <main>
+      <div class="canvas-wrapper">
+        <canvas id="stratum-canvas" width="800" height="500"></canvas>
+      </div>
+    </main>
+  </div>
+
+  <!-- Stratum Application Logic -->
+  <script>
+    // Initialize Fabric Canvas
+    const canvas = new fabric.Canvas('stratum-canvas', {
+      backgroundColor: '#ffffff',
+      preserveObjectStacking: true
+    });
+
+    // Add Editable Text
+    function addText() {
+      const text = new fabric.IText('Double-click to edit', {
+        left: 150,
+        top: 150,
+        fontFamily: 'sans-serif',
+        fontSize: 32,
+        fill: document.getElementById('fill-color').value
+      });
+      canvas.add(text);
+      canvas.setActiveObject(text);
+    }
+
+    // Add Rectangle
+    function addRect() {
+      const rect = new fabric.Rect({
+        left: 200,
+        top: 180,
+        width: 160,
+        height: 110,
+        rx: 8,
+        ry: 8,
+        fill: document.getElementById('fill-color').value
+      });
+      canvas.add(rect);
+      canvas.setActiveObject(rect);
+    }
+
+    // Add Circle
+    function addCircle() {
+      const circle = new fabric.Circle({
+        left: 260,
+        top: 160,
+        radius: 65,
+        fill: document.getElementById('fill-color').value
+      });
+      canvas.add(circle);
+      canvas.setActiveObject(circle);
+    }
+
+    // Trigger Image Upload
+    function triggerUpload() {
+      document.getElementById('img-upload').click();
+    }
+
+    document.getElementById('img-upload').addEventListener('change', function (e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function (event) {
+        fabric.Image.fromURL(event.target.result, function (img) {
+          img.scaleToWidth(300);
+          canvas.add(img);
+          canvas.centerObject(img);
+          canvas.setActiveObject(img);
+        });
+      };
+      reader.readAsDataURL(file);
+      e.target.value = '';
+    });
+
+    // Change Selected Object Color
+    function changeColor(color) {
+      const active = canvas.getActiveObject();
+      if (active) {
+        active.set('fill', color);
+        canvas.renderAll();
+      }
+    }
+
+    // Change Canvas Background Color
+    function changeCanvasBg(color) {
+      canvas.setBackgroundColor(color, canvas.renderAll.bind(canvas));
+    }
+
+    // Layer Controls ("Stratum" Stacking)
+    function bringForward() {
+      const active = canvas.getActiveObject();
+      if (active) canvas.bringForward(active);
+    }
+
+    function sendBackward() {
+      const active = canvas.getActiveObject();
+      if (active) canvas.sendBackwards(active);
+    }
+
+    // Delete Selected Object
+    function deleteSelected() {
+      const active = canvas.getActiveObject();
+      if (active) canvas.remove(active);
+    }
+
+    // Keyboard Delete Support
+    window.addEventListener('keydown', function (e) {
+      if ((e.key === 'Delete' || e.key === 'Backspace') && canvas.getActiveObject()) {
+        if (!canvas.getActiveObject().isEditing) {
+          deleteSelected();
+        }
+      }
+    });
+
+    // Export Design as PNG
+    function exportImage() {
+      canvas.discardActiveObject();
+      canvas.renderAll();
+      const link = document.createElement('a');
+      link.download = 'stratum-design.png';
+      link.href = canvas.toDataURL({ format: 'png', quality: 1 });
+      link.click();
+    }
+  </script>
+</body>
+</html>
